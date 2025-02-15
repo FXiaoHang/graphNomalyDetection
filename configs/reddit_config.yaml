@@ -1,0 +1,24 @@
+# 模型架构参数
+in_channels: 64   # 修改为实际的输入特征维度
+hidden_channels: 128  # 由于Reddit数据集较大，增加隐藏层维度
+num_layers: 4      # 增加层数以捕获更复杂的模式
+dropout: 0.6       # 增加dropout防止过拟合
+
+# 训练参数
+learning_rate: 0.005  # 降低学习率以提高稳定性
+weight_decay: 0.001   # 增加正则化
+epochs: 300           # 增加训练轮数
+early_stopping: 30    # 增加早停耐心值
+
+# 损失函数参数
+edge_loss_weight: 0.15  # 增加结构正则化的权重
+
+# 数据集参数
+dataset_name: 'reddit'
+data_path: 'reddit.pt'
+
+# 负样本采样参数
+num_neg_samples: 10     # 增加采样数量，因为Reddit数据集更大
+k_hop: 3               # 增加跳数范围，以获取更多的上下文信息
+similarity_threshold: 0.4  # 降低相似度阈值，以获取更多的候选样本
+batch_size: 1000  # 添加批处理大小参数 

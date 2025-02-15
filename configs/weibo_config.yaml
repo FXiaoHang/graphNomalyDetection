@@ -1,0 +1,23 @@
+# 模型架构参数
+in_channels: 400  # 根据实际数据集特征维度设置
+hidden_channels: 64
+num_layers: 3
+dropout: 0.5
+
+# 训练参数
+learning_rate: 0.01
+weight_decay: 0.0005
+epochs: 200
+early_stopping: 20
+
+# 损失函数参数
+edge_loss_weight: 0.1
+
+# 数据集参数
+dataset_name: 'weibo'
+data_path: 'weibo.pt'
+
+# 负样本采样参数
+num_neg_samples: 5
+k_hop: 2
+similarity_threshold: 0.5 
