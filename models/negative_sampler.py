@@ -70,5 +70,5 @@ class HardNegativeSampler:
         hard_negatives = list(set(hard_negatives))
         return torch.tensor(hard_negatives, device=device)
 
-    def __call__(self, x, edge_index, positive_indices):
+    def __call__(self, x, edge_index, positive_indices):   
         return self.sample_hard_negatives(x, edge_index, positive_indices) 

@@ -3,6 +3,7 @@ from torch_geometric.data import Data
 import torch.optim as optim
 from models.gcn_detector import ImprovedGCNDetector
 from models.negative_sampler import HardNegativeSampler
+from models.focal_loss import FocalLoss
 from sklearn.metrics import roc_auc_score
 import numpy as np
 from config import ModelConfig
@@ -117,7 +118,7 @@ def main():
         lr=config.learning_rate,
         weight_decay=config.weight_decay
     )
-    criterion = torch.nn.BCELoss()
+    criterion = FocalLoss(alpha=0.25, gamma=2.0)
     
     # 训练循环
     best_auc = 0
