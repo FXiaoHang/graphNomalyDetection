@@ -103,4 +103,4 @@ class ImprovedGCNDetector(nn.Module):
         # 预测异常分数
         scores = self.pred_layer(x)
         
-        return torch.sigmoid(scores) 
+        return torch.sigmoid(scores)
