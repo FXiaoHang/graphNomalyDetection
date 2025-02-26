@@ -29,26 +29,32 @@ def train(model, data, optimizer, criterion, config):
     sampler = HardNegativeSampler(
         num_samples=config.num_neg_samples,
         k_hop=config.k_hop,
-        similarity_threshold=config.similarity_threshold,
-        batch_size=config.batch_size if hasattr(config, 'batch_size') else 1000
+        similarity_threshold=config.similarity_threshold
     )
     hard_negative_indices = sampler(data.x, data.edge_index, positive_indices)
     
     # 构建训练子图
     train_indices = torch.cat([positive_indices, hard_negative_indices])
-    train_mask = torch.zeros_like(data.y, dtype=torch.bool)
-    train_mask[train_indices] = True
     
     # 前向传播
-    out = model(data.x, data.edge_index)
-    loss = calculate_loss(out[train_mask], data.y[train_mask], 
-                         data.edge_index, config, criterion)
+    out, aux_loss = model(
+        data.x, 
+        data.edge_index,
+        batch_nodes=train_indices,
+        labels=data.y
+    )
+    
+    # 计算分类损失
+    cls_loss = criterion(out[train_indices], data.y[train_indices].float())
+    
+    # 总损失
+    total_loss = cls_loss + config.aux_loss_weight * aux_loss
     
     # 反向传播
-    loss.backward()
+    total_loss.backward()
     optimizer.step()
     
-    return loss.item()
+    return total_loss.item()
 
 def calculate_loss(out, labels, edge_index, config, criterion):
     # BCE损失

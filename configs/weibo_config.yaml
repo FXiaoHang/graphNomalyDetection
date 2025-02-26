@@ -12,6 +12,9 @@ early_stopping: 20
 
 # 损失函数参数
 edge_loss_weight: 0.1
+aux_loss_weight: 0.5    # 辅助损失(引导节点和RL)的权重
+guidance_alpha: 0.25    # 引导节点正样本权重
+guidance_beta: 0.5      # 上下文级与局部级损失平衡参数
 
 # 数据集参数
 dataset_name: 'weibo'

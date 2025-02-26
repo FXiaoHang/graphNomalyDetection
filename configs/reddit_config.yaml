@@ -12,6 +12,9 @@ early_stopping: 30    # 增加早停耐心值
 
 # 损失函数参数
 edge_loss_weight: 0.2  # 增加结构正则化权重
+aux_loss_weight: 0.3    # Reddit数据集上降低辅助损失权重
+guidance_alpha: 0.3    # 增加正样本权重以平衡类别
+guidance_beta: 0.6     # 偏重上下文级损失，因为Reddit社区结构更明显
 
 # 数据集参数
 dataset_name: 'reddit'
