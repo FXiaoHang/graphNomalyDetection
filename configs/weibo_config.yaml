@@ -7,7 +7,7 @@ dropout: 0.5
 # 训练参数
 learning_rate: 0.01
 weight_decay: 0.0005
-epochs: 120
+epochs: 200
 early_stopping: 20
 
 # 损失函数参数
