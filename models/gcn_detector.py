@@ -107,12 +107,22 @@ class ImprovedGCNDetector(nn.Module):
             h = conv(h, selected_edge_index)
             h = F.relu(h)
             h = F.dropout(h, p=0.5, training=self.training)
-            
-        # 4. 特征融合与预测
-        final_features = torch.cat([h, guidance_features], dim=1)
-        scores = self.pred_layer(final_features)
         
-        if self.training:
-            return torch.sigmoid(scores), guidance_loss + value_loss
+        # 4. 特征融合与预测
+        # 确保特征维度匹配
+        if guidance_features is not None and h is not None:
+            final_features = torch.cat([h, guidance_features], dim=1)
+            scores = self.pred_layer(final_features)
+            
+            if self.training:
+                aux_loss = guidance_loss + value_loss if guidance_loss is not None else value_loss
+                return scores, aux_loss
+            else:
+                return scores
         else:
-            return torch.sigmoid(scores)
+            # 如果特征生成失败，只使用GCN特征
+            scores = self.pred_layer(h)
+            if self.training:
+                return scores, torch.tensor(0.0, device=x.device)
+            else:
+                return scores

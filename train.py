@@ -44,8 +44,11 @@ def train(model, data, optimizer, criterion, config):
         labels=data.y
     )
     
+    # 修改标签维度以匹配预测维度
+    target_labels = data.y[train_indices].float().unsqueeze(1)  # 添加一个维度使其形状为 [N, 1]
+    
     # 计算分类损失
-    cls_loss = criterion(out[train_indices], data.y[train_indices].float())
+    cls_loss = criterion(out[train_indices], target_labels)
     
     # 总损失
     total_loss = cls_loss + config.aux_loss_weight * aux_loss
