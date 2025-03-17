@@ -20,6 +20,9 @@ class ModelConfig:
     
     # 损失函数参数
     edge_loss_weight: float = 0.1
+    aux_loss_weight: float = 0.5    # 新增：辅助损失权重
+    guidance_alpha: float = 0.25    # 新增：引导节点正样本权重
+    guidance_beta: float = 0.5      # 新增：上下文级与局部级损失平衡参数
     
     # 数据集参数
     dataset_name: str = 'weibo'
@@ -55,8 +58,15 @@ class ModelConfig:
             'epochs': self.epochs,
             'early_stopping': self.early_stopping,
             'edge_loss_weight': self.edge_loss_weight,
+            'aux_loss_weight': self.aux_loss_weight,    # 新增
+            'guidance_alpha': self.guidance_alpha,      # 新增
+            'guidance_beta': self.guidance_beta,        # 新增
             'dataset_name': self.dataset_name,
             'data_path': self.data_path,
+            'num_neg_samples': self.num_neg_samples,
+            'k_hop': self.k_hop,
+            'similarity_threshold': self.similarity_threshold,
+            'batch_size': self.batch_size,
         }
         
         os.makedirs(os.path.dirname(yaml_path), exist_ok=True)

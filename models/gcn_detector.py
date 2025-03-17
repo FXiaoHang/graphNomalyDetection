@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv
+from models.guidance_node import GuidanceNodeGenerator
+from models.rl_neighbor_selector import RLNeighborSelector
 
 class AdaptiveGCNLayer(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -54,21 +56,29 @@ class ImprovedGCNDetector(nn.Module):
     def __init__(self, in_channels, hidden_channels, num_layers):
         super(ImprovedGCNDetector, self).__init__()
         
+        # 引导节点生成器
+        self.guidance_generator = GuidanceNodeGenerator(
+            in_channels=in_channels,
+            hidden_channels=hidden_channels,
+            num_layers=2
+        )
+        
+        # RL邻居选择器
+        self.neighbor_selector = RLNeighborSelector(
+            in_channels=in_channels,
+            hidden_channels=hidden_channels
+        )
+        
+        # GCN层
         self.convs = nn.ModuleList()
-        
-        # 第一层
-        self.convs.append(AdaptiveGCNLayer(in_channels, hidden_channels))
-        
-        # 中间层
+        self.convs.append(GCNConv(in_channels, hidden_channels))
         for _ in range(num_layers - 2):
-            self.convs.append(AdaptiveGCNLayer(hidden_channels, hidden_channels))
-            
-        # 最后一层
-        self.convs.append(AdaptiveGCNLayer(hidden_channels, hidden_channels))
+            self.convs.append(GCNConv(hidden_channels, hidden_channels))
+        self.convs.append(GCNConv(hidden_channels, hidden_channels))
         
-        # 改进预测层，添加更多的特征提取能力
+        # 预测层
         self.pred_layer = nn.Sequential(
-            nn.Linear(hidden_channels, hidden_channels),
+            nn.Linear(hidden_channels * 2, hidden_channels),  # 包含原始特征和引导特征
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(hidden_channels, hidden_channels // 2),
@@ -77,30 +87,42 @@ class ImprovedGCNDetector(nn.Module):
             nn.Linear(hidden_channels // 2, 1)
         )
         
-        # 添加注意力机制
-        self.attention = nn.Sequential(
-            nn.Linear(hidden_channels, 1),
-            nn.Sigmoid()
+    def forward(self, x, edge_index, batch_nodes=None, labels=None):
+        if batch_nodes is None:
+            batch_nodes = torch.arange(x.size(0), device=x.device)
+            
+        # 1. 生成引导节点特征
+        guidance_features, guidance_loss = self.guidance_generator(
+            x, edge_index, batch_nodes, labels
         )
         
-    def forward(self, x, edge_index):
-        # 特征提取
-        features = []
-        for i in range(len(self.convs)):
-            x = self.convs[i](x, edge_index)
-            if i != len(self.convs) - 1:
-                x = F.relu(x)
-                x = F.dropout(x, p=0.5, training=self.training)
-                features.append(x)
+        # 2. RL邻居选择
+        selected_edge_index, value_loss, _ = self.neighbor_selector(
+            x, edge_index, guidance_features, labels
+        )
         
-        # 多尺度特征融合
-        if features:
-            attention_weights = [self.attention(feat) for feat in features]
-            attention_weights = torch.softmax(torch.cat(attention_weights, dim=1), dim=1)
-            multi_scale_feature = sum([w * f for w, f in zip(attention_weights.split(1, dim=1), features)])
-            x = x + multi_scale_feature
+        # 3. 消息传递
+        h = x
+        for conv in self.convs:
+            h = conv(h, selected_edge_index)
+            h = F.relu(h)
+            h = F.dropout(h, p=0.5, training=self.training)
         
-        # 预测异常分数
-        scores = self.pred_layer(x)
-        
-        return torch.sigmoid(scores) 
+        # 4. 特征融合与预测
+        # 确保特征维度匹配
+        if guidance_features is not None and h is not None:
+            final_features = torch.cat([h, guidance_features], dim=1)
+            scores = self.pred_layer(final_features)
+            
+            if self.training:
+                aux_loss = guidance_loss + value_loss if guidance_loss is not None else value_loss
+                return scores, aux_loss
+            else:
+                return scores
+        else:
+            # 如果特征生成失败，只使用GCN特征
+            scores = self.pred_layer(h)
+            if self.training:
+                return scores, torch.tensor(0.0, device=x.device)
+            else:
+                return scores
